@@ -26,7 +26,6 @@ CUR_TAB=0
 #Backslash
 BACK_SLASH=\\
 
-
 #Default flag for comment
 comment_flag=0
 
@@ -35,6 +34,7 @@ function GET_CONTENT()
     #Get the full content of each line, to replace later
     LINE=$(sed -n ${LINE_NO}p $FILE)
 
+                
     #Get only content that has been skipped
     CONTENT=$(echo $LINE | grep "${SKIP_CONTENT}.*" -o)
 }
@@ -61,9 +61,22 @@ do
     else
     #Else, this line is a normal instruction
 
-    sed -i $LINE_NO's/\\/?/g' $FILE
-    sed -i $LINE_NO's/&/AND/g' $FILE
+    #Check if content contain a double quotes 
+        C_STR=$(echo $CONTENT | grep '".*"' -o)
+        if [[ ${#C_STR} > 0 ]]
+        then
+            STR=$C_STR
+            #echo $LINE_NO : $STR
+            sed -i "${LINE_NO}s/${STR}/STR/g" $FILE
+        fi
 
+    sed -i $LINE_NO's/\\/BSLASH/g' $FILE
+    sed -i $LINE_NO's/&/AND/g' $FILE
+    sed -i $LINE_NO's/\[/OSBRK/g' $FILE
+    sed -i $LINE_NO's/]/CSBRK/g' $FILE
+    
+    
+    
     if [[ $FIRST_WORD == "{" ]]
     then
 
@@ -88,16 +101,25 @@ do
 
     elif [[ $FIRST_WORD == "}" ]]
     then
+        A_CUR=$(echo $CONTENT | grep "}t.*" -o)
 
         #Check if the line has more word
-        if [[ ${#CONTENT} > 1 ]]
+        if [[ (${#CONTENT} > 1)  &&  ($CONTENT != "};") ]]
         then
+            #echo $LINE_NO = $A_CUR = ${#A_CUR}
+            if [[ ${#A_CUR} > 0 ]]
+            then
+                echo ${#A_CUR}
+            else
             #Replace curly bracket by a curly bracket and a carriage return
-            sed -i "${LINE_NO}s/}/}\n/" $FILE
-            
+                sed -i "${LINE_NO}s/}/}\n/" $FILE
+            fi
             #Get the content of line again
-            GET_CONTENT $LINE_NO
+            #GET_CONTENT $LINE_NO
         fi
+
+        #Get the content of line again
+        GET_CONTENT $LINE_NO
 
         #Decrease tab level by 1
         CUR_TAB=$[ $CUR_TAB - 1 ]
@@ -129,7 +151,7 @@ do
             comment_flag=0
         fi
 
-    elif [[ ${CONTENT:0:3} == "for" ]]
+    elif [[ ${CONTENT:0:4} == "for " || ${CONTENT:0:4} == "for(" ]]
     then
         sed -i "${LINE_NO}s/{/\n{/g" $FILE
         sed -i "${LINE_NO}s/}/\n}/g" $FILE
@@ -140,21 +162,29 @@ do
     else 
         #The content is default started by a character
 
+        
+
         #Get the content after a colon
-        COLON=$(sed -n ${LINE_NO}p $FILE | grep "[;].*" -o )
+        COLON=$(sed -n ${LINE_NO}p $FILE | grep ";.*" -o )
         COCO=${COLON:1}
 
         #Check if these content is contain more commands
         if [[ ${#COLON} > 1 ]]
         then
-            #Let this commands fall down next line
+            #echo $COLON
+            #Let this commands fall down to the next line
             sed -i "${LINE_NO}s/${COCO}/\n${COCO}/" $FILE
         fi
 
+        ARR_DEC=$(sed -n ${LINE_NO}p $FILE | grep "=[ ]*{" -o )
+        if [[ ${#ARR_DEC} > 1 ]]
+        then
+            echo "Declare an array"
+        else
         #Put all curly bracket to next line
         sed -i "${LINE_NO}s/{/\n{/" $FILE
         sed -i "${LINE_NO}s/}/\n}/" $FILE
-
+        fi
         #Get the content again
         GET_CONTENT $LINE_NO
 
@@ -162,27 +192,26 @@ do
         if [[ ${#VAR} > 0 ]]
         then
         CONST=$(echo $CONTENT | grep "==.*[0-9]*.*)" -o | grep "[0-9]*" -o)
-        echo $VAR $CONST
-        
+        #echo $VAR $CONST
         CONTENT="if ( $CONST == $VAR );"
         #echo $CONTENT
         fi
 
-        DUP=$(echo $CONTENT | grep "([a-zA-Z0-9]" )
+        DUP=$(echo $CONTENT | grep "($VAR_MARK" )
         if [[ ${#DUP} > 1 ]]
         then
             #echo $DUP
-            sed -i "${LINE_NO}s/(/( /g" $FILE
+            #echo $LINE_NO
+            sed -i "${LINE_NO}s/(/( /" $FILE
         fi
         
-
         CORRECT_CONTENT=$TAB$CONTENT
 
     fi
     fi
 
     #echo $CORRECT_CONTENT
-    #echo $LINE_NO = $comment_flag
+    #echo $LINE_NO = $COLON
 
     #Replace current content by a corrected content
         sed -i $LINE_NO's/\\/?/g' $FILE
@@ -194,8 +223,13 @@ do
         else
             sed -i "${LINE_NO}s/${LINE}/${CORRECT_CONTENT}/" $FILE
         fi
-        sed -i $LINE_NO's/?/\\/g' $FILE
-        sed -i $LINE_NO's/AND/\&/g' $FILE
+
+        sed -i "${LINE_NO}s/STR/$STR/g" $FILE
     
+        sed -i $LINE_NO's/BSLASH/\\/g' $FILE
+        sed -i $LINE_NO's/AND/\&/g' $FILE
+        sed -i $LINE_NO's/OSBRK/[/g' $FILE
+        sed -i $LINE_NO's/CSBRK/]/g' $FILE
+        #sed -i $LINE_NO's/BLANK//g' $FILE
     LINE_NO=$(( $LINE_NO + 1 ))
 done

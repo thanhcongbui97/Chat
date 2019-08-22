@@ -3,38 +3,35 @@
 LINK="/home/thanhcong/Desktop/Shell/Project/"
 cd $LINK
 FILE='main.c'
-LINE_NO=3
+LINE_START=1
+LINE_END=100
+LINE_NO=$LINE_START
+
+#Define a tab length
 SPACE="    "
+
+#These starting content to be skipped
+SKIP_CONTENT="[^ \t]"
+
+#Variable marking
+VAR_MARK="[a-zA-Z_&*]"
+
+#Default Tab Indent
 TAB=""
+
+#Default tab level 
 CUR_TAB=0
-while [[ LINE_NO -lt 20 ]]
+
+while [[ LINE_NO -lt 100 ]]
 do
-LINE=$(sed -n $LINE_NO'p' $FILE)
-echo $LINE
-if [[ $LINE == *"{"* ]]
-then
-    CONTENT=$(sed -n $LINE_NO'p' $FILE | grep  "{.*" -o)
-    CORRECT_CONTENT=$TAB$CONTENT
+    sed -i $LINE_NO's/\\/?/g' $FILE
+    sed -i $LINE_NO's/&/AND/g' $FILE
+    
+    LINE=$(sed -n $LINE_NO'p' $FILE)
+    CONTENT=$(sed -n $LINE_NO'p' $FILE)
+
     CUR_TAB=$[ $CUR_TAB + 1 ]
-    C_TAB=$[ $RANDOM % 5]
-    STAB=""
-    while [[ C_TAB -gt 0 ]]
-    do
-        STAB=$SPACE$STAB
-        C_TAB=$[ $C_TAB - 1 ]
-    done
-    TAB=$STAB
-    echo $LINE
-    if [[ $LINE == [a-zA-Z]* ]]
-    then
-    echo "Aaaaa"
-    fi
-
-elif [[ $LINE == *"}"* ]]
-    then
-    CONTENT=$(sed -n $LINE_NO'p' $FILE | grep  "}.*" -o)
-    CUR_TAB=$[ $CUR_TAB - 1 ]
-    C_TAB=$[ $RANDOM % 5]
+    C_TAB=$[ $RANDOM % 7]
     STAB=""
     while [[ C_TAB -gt 0 ]]
     do
@@ -43,12 +40,11 @@ elif [[ $LINE == *"}"* ]]
     done
     TAB=$STAB
     CORRECT_CONTENT=$TAB$CONTENT
-else
-    CONTENT=$(sed -n $LINE_NO'p' $FILE | grep  "[a-zA-Z].*" -o)
-    CORRECT_CONTENT=$TAB$CONTENT
-fi
 
-sed -i "${LINE_NO}s/${LINE}/${CORRECT_CONTENT}/g" $FILE
+    sed -i "${LINE_NO}c+${CORRECT_CONTENT}" $FILE
+    sed -i "${LINE_NO}s/+//" $FILE
 
-LINE_NO=$(( $LINE_NO + 1 ))
+    sed -i $LINE_NO's/?/\\/g' $FILE
+    sed -i $LINE_NO's/AND/\&/g' $FILE
+    LINE_NO=$(( $LINE_NO + 1 ))
 done
